@@ -1,0 +1,12 @@
+name: env_sanger_ms
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - biopython
+  - pandas
+  - numpy
+  - matplotlib
+  - reportlab
