@@ -68,15 +68,15 @@ def _save_attachments(msg: Message, dest: Path) -> list[Path]:
 
 
 def fetch_new(cfg: dict[str, str]) -> list[Path]:
-    """Download attachments of not-yet-processed mails whose From header
-    contains SENDER_FILTER. Uses BODY.PEEK so the mailbox is left unchanged.
+    """Download attachments of not-yet-processed mails that mention
+    SENDER_FILTER anywhere (forwarded mails lose the original From). Uses BODY.PEEK so the mailbox is left unchanged.
     Returns the new batch directories (one per mail with attachments)."""
     state = _load_state()
     new_dirs: list[Path] = []
     with imaplib.IMAP4_SSL(cfg["IMAP_HOST"]) as imap:
         imap.login(cfg["IMAP_USER"], cfg["IMAP_PASSWORD"])
         imap.select(cfg["IMAP_FOLDER"], readonly=True)
-        _, data = imap.search(None, "FROM", f'"{cfg["SENDER_FILTER"]}"')
+        _, data = imap.search(None, "TEXT", f'"{cfg["SENDER_FILTER"]}"')
         for num in data[0].split():
             _, fetched = imap.fetch(num, "(BODY.PEEK[])")
             msg = email.message_from_bytes(fetched[0][1])

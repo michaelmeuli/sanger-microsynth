@@ -7,6 +7,7 @@ Default: every batch folder in data/sanger/microsynth_mail/ without a report yet
 """
 import argparse
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -27,7 +28,10 @@ def analyse_batch(batch: Path, blast: bool):
         if read is None:
             print(f"  skipped (unparsable or no qualities): {ab1.name}")
             continue
+        t0 = time.time()
         hits = blast_read(read.trimmed_seq, read.locus) if blast else []
+        top = f"{hits[0].title[:50]} ({hits[0].identity:.1f}%)" if hits else "-"
+        print(f"  {ab1.name}: {read.locus}, {read.trimmed_length} bp, {top} [{time.time() - t0:.0f}s]", flush=True)
         rows.append((read, hits))
     return rows
 

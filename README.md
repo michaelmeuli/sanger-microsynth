@@ -9,6 +9,15 @@ FASTA plus `.ab1` chromatograms. In the webshop under "Options & Preferences"
 the sequences can be delivered trimmed or untrimmed; untrimmed is preferable
 here because we trim ourselves.
 
+## Mail access
+
+UZH mail is Office 365 and only allows OAuth2 (no passwords, no app passwords),
+so scripts can't log in directly. Instead an Outlook rule forwards Microsynth
+mails (with attachments) to the Gmail account, and this pipeline reads and
+sends through Gmail with an app password. (UZH may restrict auto-forwarding;
+if the rule is blocked, save attachments into `data/sanger/microsynth_mail/<batch>/`
+by hand and run `main2` on them.)
+
 ## Layout
 
 - `sanger_ms/` — `mail.py` (IMAP fetch, zip-slip-safe unzip, read-only via
@@ -25,7 +34,7 @@ here because we trim ourselves.
 ```bash
 conda env create -f environment.yml -p /home/mimeul/data/conda/envs/env_sanger_ms
 mkdir -p ~/.config/sanger-microsynth && cp mail.env.example ~/.config/sanger-microsynth/mail.env
-chmod 600 ~/.config/sanger-microsynth/mail.env   # then fill in the UZH IMAP/SMTP details
+chmod 600 ~/.config/sanger-microsynth/mail.env   # then fill in the Gmail address and app password
 ```
 
 ## Run
@@ -42,8 +51,8 @@ Batches that already have a `<batch>.pdf` marker in the output folder are skippe
 
 ## Notes
 
-- Only the trimmed sequence is sent to NCBI BLAST (16S: `16S_ribosomal_RNA`;
-  otherwise `core_nt`, which is slow). Use `--no-blast` to keep data local.
+- Only the trimmed sequence is sent to NCBI BLAST (16S: `refseq_rna`, since `16S_ribosomal_RNA` hangs remotely;
+  otherwise `core_nt`). Use `--no-blast` to keep data local.
 - Species confidence: high = ≥99% identity and ≥90% query coverage, medium =
   ≥97% / ≥80%. For mycobacteria, a BLAST top hit on 16S cannot separate
   close species (e.g. the *M. kansasii* complex); see mlsa-kansasii.
