@@ -22,7 +22,8 @@ by hand and run `main2` on them.)
 
 - `sanger_ms/` — `mail.py` (IMAP fetch, zip-slip-safe unzip, read-only via
   `BODY.PEEK`), `sanger_io.py` (AB1 + Mott trimming, same as mlsa-kansasii),
-  `identify.py` (NCBI BLAST of the trimmed read), `report.py` (PDF, reportlab),
+  `identify.py` (NCBI BLAST of the trimmed read), `refalign.py` (alignment of the read to the 7
+  kansasii-complex reference strains, PDF per read; copy of mlsa-kansasii's `mlsa/refalign.py`), `report.py` (PDF, reportlab),
   `send.py` (SMTP), `config.py`.
 - `main1_fetch_mail/` — downloads new result mails' attachments to
   `/shares/sander.imm.uzh/MM/kansasii/data/sanger/microsynth_mail/<date>_<msgid>/`.
@@ -48,6 +49,19 @@ sbatch submit_fetch_analyse.sbatch                           # both steps
 ```
 
 Batches that already have a `<batch>.pdf` marker in the output folder are skipped.
+
+## Reference alignment
+
+Besides BLAST, every read is aligned to the GTDB representative genome of each
+*M. kansasii*-complex species
+(`data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_gtdb_representatives/`, 7 genomes).
+The closest reference (fewest differences over the read) is shown in the report table
+("Ref. alignment"), and one `<read>_alignment.pdf` per read (pairwise difference matrix +
+alignment of the read with all references, mismatches highlighted) goes to
+`output/sanger-microsynth/<batch>/` and is attached to the mail. Call: `ok` = closest reference
+&ge;99% identical and &ge;2 differences fewer than the next; `ambiguous` = tie; `divergent` = closest
+&lt;99% (outside the references' diversity, or a bad read). No PDF below 90% identity. `--no-refalign` skips this.
+Only 1 genome per species: intra-species diversity is not covered (see mlsa-kansasii README, main3).
 
 ## Notes
 

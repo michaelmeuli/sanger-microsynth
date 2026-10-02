@@ -13,3 +13,4 @@ See README.md. Easy to get wrong:
 - **Paths:** data/output roots are derived in `sanger_ms/__init__.py`
   (`/shares/sander.imm.uzh/MM/kansasii/{data,output}`).
 - The `.ab1` trimming in `sanger_io.py` is copied from mlsa-kansasii; keep them in sync.
+- `sanger_ms/refalign.py` is copied from mlsa-kansasii (`mlsa/refalign.py`); keep them in sync.
