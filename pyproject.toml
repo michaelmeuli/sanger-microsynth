@@ -1,0 +1,9 @@
+# Type-checking config only (this repo is not packaged).
+# Run: mypy   (from the repo root, in an env with mypy + pandas-stubs + types-reportlab)
+[tool.mypy]
+strict = true
+python_version = "3.11"
+explicit_package_bases = true
+files = ["sanger_ms", "main1_fetch_mail", "main2_analyse_report"]
+# Biopython ships py.typed but leaves many functions unannotated.
+untyped_calls_exclude = ["Bio"]

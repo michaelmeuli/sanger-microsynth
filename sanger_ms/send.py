@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import smtplib
+from collections.abc import Sequence
 from email.message import EmailMessage
 from pathlib import Path
 
 
-def send_report(cfg: dict[str, str], pdf: Path, subject: str, body: str, extra: list[Path] = ()) -> None:
+def send_report(cfg: dict[str, str], pdf: Path, subject: str, body: str, extra: Sequence[Path] = ()) -> None:
     msg = EmailMessage()
     msg["From"], msg["To"], msg["Subject"] = cfg["MAIL_FROM"], cfg["MAIL_TO"], subject
     msg.set_content(body)

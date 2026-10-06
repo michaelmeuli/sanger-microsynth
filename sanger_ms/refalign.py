@@ -16,11 +16,17 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
+import numpy.typing as npt
 from Bio import SeqIO
 from Bio.Align import PairwiseAligner
 from Bio.Seq import Seq
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
 
 K = 15
 PAD = 40  # bases of reference added on each side of the seeded window
@@ -31,7 +37,7 @@ for _i, _b in enumerate(b"ACGT"):
 _SENTINEL = np.uint32(0xFFFFFFFF)
 
 
-def _kmer_codes(seq: str | bytes) -> np.ndarray:
+def _kmer_codes(seq: str | bytes) -> npt.NDArray[np.uint32]:
     """2-bit code of every K-mer (uint32; sentinel where it holds a non-ACGT base)."""
     raw = seq.encode() if isinstance(seq, str) else seq
     b = _LUT[np.frombuffer(raw, dtype=np.uint8)]
@@ -67,8 +73,10 @@ class Reference:
     path: Path
     contigs: dict[str, str] = field(default_factory=dict, repr=False)
     _ids: list[str] = field(default_factory=list, repr=False)
-    _starts: np.ndarray = field(default=None, repr=False)  # offset of each contig in _codes
-    _codes: np.ndarray = field(default=None, repr=False)   # all contigs' k-mer codes, sentinel-separated
+    # offset of each contig in _codes
+    _starts: npt.NDArray[np.intp] = field(default_factory=lambda: np.empty(0, dtype=np.intp), repr=False)
+    # all contigs' k-mer codes, sentinel-separated
+    _codes: npt.NDArray[np.uint32] = field(default_factory=lambda: np.empty(0, dtype=np.uint32), repr=False)
 
     @property
     def label(self) -> str:
@@ -78,14 +86,17 @@ class Reference:
         if not self.contigs:
             self.contigs = {r.id: str(r.seq).upper() for r in SeqIO.parse(self.path, "fasta")}
             gap = np.full(K, _SENTINEL, dtype=np.uint32)
-            parts, self._ids, starts, pos = [], [], [], 0
+            parts: list[npt.NDArray[np.uint32]] = []
+            starts: list[int] = []
+            pos = 0
+            self._ids = []
             for cid, seq in self.contigs.items():
                 c = _kmer_codes(seq)
                 parts += [c, gap]
                 self._ids.append(cid)
                 starts.append(pos)
                 pos += len(c) + K
-            self._starts = np.array(starts)
+            self._starts = np.array(starts, dtype=np.intp)
             self._codes = np.concatenate(parts)
 
 
@@ -226,7 +237,8 @@ class ReadResult:
 
     @property
     def closest_species(self) -> str:
-        return self.hits[self.best].ref.species if self.hits else "NA"
+        best = self.best
+        return self.hits[best].ref.species if best is not None else "NA"
 
     @property
     def runner_up(self) -> int | None:
@@ -240,7 +252,7 @@ def identify_read(refs: list[Reference], name: str, locus: str | None, seq: str,
     return ReadResult(name, locus, seq, hits, [d for d, _ in dc], [c for _, c in dc], min_identity, min_margin)
 
 
-def pairwise_matrix(res: ReadResult) -> tuple[list[str], np.ndarray, np.ndarray]:
+def pairwise_matrix(res: ReadResult) -> tuple[list[str], npt.NDArray[np.int_], npt.NDArray[np.float64]]:
     """Labels (references then read), difference counts and identity (%) over pairwise-complete columns."""
     rows = [h.ref_cols for h in res.hits] + [res.read]
     labels = [h.ref.label for h in res.hits] + [res.name]
@@ -279,13 +291,14 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
     label_w = max(len(s) for s in names) * cw + 10
     x0 = 30 + label_w
 
-    def new_page():
+    def new_page() -> tuple[Figure, Axes]:
         fig = plt.figure(figsize=(W / 72, H / 72))
-        ax = fig.add_axes([0, 0, 1, 1])
+        ax = fig.add_axes((0, 0, 1, 1))
         ax.set_xlim(0, W); ax.set_ylim(H, 0); ax.axis("off")
         return fig, ax
 
-    pages, (fig, ax) = [], new_page()
+    pages: list[Figure] = []
+    fig, ax = new_page()
     pages.append(fig)
     ax.text(30, 30, title or f"{res.name}: alignment to the kansasii-complex reference strains",
             fontsize=12, weight="bold", va="center")
@@ -310,7 +323,7 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
         ax.add_patch(Rectangle((mx + j * cell, my), cell - 2, 14, color="#d0d5dd"))
         ax.text(mx + j * cell + cell / 2, my + 7, str(j + 1), fontsize=6.5, ha="center", va="center")
     for i in range(n):
-        y = my + 16 + i * 14
+        y: float = my + 16 + i * 14
         ax.text(mx - 24, y + 6, names[i], fontsize=6.5, ha="right", va="center",
                 weight="bold" if i == best or i == n - 1 else "normal")
         ax.add_patch(Rectangle((mx - 20, y), 18, 12, color="#d0d5dd"))
@@ -318,6 +331,8 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
         for j in range(n):
             if i == j:
                 continue
+            color: tuple[float, float, float]
+            txt: str
             if j > i:
                 a = diff[i, j] / vmax_d
                 color, txt = (1, 1 - 0.55 * a, 1 - 0.55 * a), str(diff[i, j])

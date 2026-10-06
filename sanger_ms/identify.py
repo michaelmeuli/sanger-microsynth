@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
+from typing import Any
 
 from Bio.Blast import NCBIWWW, NCBIXML
 
@@ -39,9 +40,9 @@ def blast_read(seq: str, locus: str | None, n_hits: int = 3, timeout: int = BLAS
     timeout seconds (the stuck request is abandoned in a daemon thread)."""
     if len(seq) < MIN_BLAST_LENGTH:
         return []
-    result: dict = {}
+    result: dict[str, Any] = {}
 
-    def work():
+    def work() -> None:
         try:
             result["hits"] = _blast(seq, locus, n_hits)
         except Exception as exc:  # network/NCBI errors must not kill the batch
@@ -53,7 +54,8 @@ def blast_read(seq: str, locus: str | None, n_hits: int = 3, timeout: int = BLAS
     if "hits" not in result:
         print(f"    BLAST failed or timed out: {result.get('error', f'no answer in {timeout}s')}", flush=True)
         return []
-    return result["hits"]
+    hits: list[Hit] = result["hits"]
+    return hits
 
 
 def _blast(seq: str, locus: str | None, n_hits: int) -> list[Hit]:

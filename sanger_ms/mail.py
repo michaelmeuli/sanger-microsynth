@@ -9,19 +9,21 @@ import zipfile
 from email.message import Message
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from typing import Any, cast
 
 from . import MAIL_DIR, STATE_FILE
 
 SEQ_SUFFIXES = {".ab1", ".seq", ".fasta", ".fa", ".fna", ".txt", ".pdf", ".zip"}
 
 
-def _load_state() -> dict:
+def _load_state() -> dict[str, Any]:
     if STATE_FILE.exists():
-        return json.loads(STATE_FILE.read_text())
+        state: dict[str, Any] = json.loads(STATE_FILE.read_text())
+        return state
     return {}
 
 
-def _save_state(state: dict) -> None:
+def _save_state(state: dict[str, Any]) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
@@ -57,7 +59,7 @@ def _save_attachments(msg: Message, dest: Path) -> list[Path]:
             continue
         dest.mkdir(parents=True, exist_ok=True)
         path = dest / name
-        path.write_bytes(part.get_payload(decode=True) or b"")
+        path.write_bytes(cast("bytes | None", part.get_payload(decode=True)) or b"")
         saved.append(path)
         if path.suffix.lower() == ".zip":
             try:
@@ -79,7 +81,10 @@ def fetch_new(cfg: dict[str, str]) -> list[Path]:
         _, data = imap.search(None, "TEXT", f'"{cfg["SENDER_FILTER"]}"')
         for num in data[0].split():
             _, fetched = imap.fetch(num, "(BODY.PEEK[])")
-            msg = email.message_from_bytes(fetched[0][1])
+            item = fetched[0]
+            if not isinstance(item, tuple):
+                continue
+            msg = email.message_from_bytes(item[1])
             msg_id = (msg.get("Message-ID") or "").strip()
             if not msg_id or msg_id in state:
                 continue

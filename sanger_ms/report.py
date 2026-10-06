@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 from datetime import date
 from pathlib import Path
+from typing import Any
 from xml.sax.saxutils import escape
 
 import matplotlib
@@ -41,9 +42,9 @@ def _quality_plot(read: Read) -> Image:
 
 
 def _ref_text(ref: ReadResult | None) -> str:
-    if ref is None or not ref.hits:
+    b = ref.best if ref is not None else None
+    if ref is None or b is None:
         return "no reference hit"
-    b = ref.best
     return f"M. {ref.closest_species} {100 * ref.identity(b):.2f}% ({ref.status})"
 
 
@@ -64,8 +65,8 @@ def build_pdf(batches: dict[str, list[tuple[Read, list[Hit], ReadResult | None]]
     for batch, rows in batches.items():
         story.append(Paragraph(f"Batch {escape(batch)}", styles["Heading2"]))
         header = ["Read", "Locus", "Raw bp", "Kept bp", "Mean Q", "% Q20", "N", "Top hit", "Ident %", "Cov %", "Conf.", "Ref. alignment"]
-        data = [header]
-        style = [("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eaed")),
+        data: list[list[Any]] = [header]
+        style: list[tuple[Any, ...]] = [("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e8eaed")),
                  ("FONTSIZE", (0, 0), (-1, -1), 7.5), ("VALIGN", (0, 0), (-1, -1), "TOP"),
                  ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#c4c7c5"))]
         for i, (read, hits, ref) in enumerate(rows, start=1):

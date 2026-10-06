@@ -6,6 +6,8 @@ Default: every batch folder in data/sanger/microsynth_mail/ without a report yet
   --no-refalign skip the alignment to the 7 kansasii-complex reference strains
   --no-send     build the PDF but don't email it
 """
+from __future__ import annotations
+
 import argparse
 import sys
 import time
@@ -16,18 +18,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sanger_ms import MAIL_DIR, OUTPUT, REFERENCES, SPECIES
 from sanger_ms.config import REQUIRED_SMTP, load_mail_config
-from sanger_ms.identify import blast_read
-from sanger_ms.refalign import identify_read, load_references, write_pdf
+from sanger_ms.identify import Hit, blast_read
+from sanger_ms.refalign import ReadResult, Reference, identify_read, load_references, write_pdf
 from sanger_ms.report import build_pdf
-from sanger_ms.sanger_io import load_read
+from sanger_ms.sanger_io import Read, load_read
 from sanger_ms.send import send_report
 
 
 MIN_ALIGNED_IDENTITY = 0.90  # below this the read is not in the complex: no alignment PDF
 
 
-def analyse_batch(batch: Path, blast: bool, refs: list | None, pdf_dir: Path):
-    rows = []
+def analyse_batch(batch: Path, blast: bool, refs: list[Reference] | None,
+                  pdf_dir: Path) -> list[tuple[Read, list[Hit], ReadResult | None]]:
+    rows: list[tuple[Read, list[Hit], ReadResult | None]] = []
     for ab1 in sorted(batch.rglob("*.ab1")):
         read = load_read(ab1)
         if read is None:
@@ -41,15 +44,15 @@ def analyse_batch(batch: Path, blast: bool, refs: list | None, pdf_dir: Path):
         if refs and read.trimmed_length >= 100:
             stem = Path(read.name).stem.replace(" ", "_")
             ref = identify_read(refs, Path(read.name).stem, read.locus, read.trimmed_seq)
-            if ref.hits and ref.identity(ref.best) >= MIN_ALIGNED_IDENTITY:
+            if ref.best is not None and ref.identity(ref.best) >= MIN_ALIGNED_IDENTITY:
                 write_pdf(ref, pdf_dir / f"{stem}_alignment.pdf")
             print(f"    ref. alignment: {ref.status}, closest {ref.closest_species}"
-                  + (f" {100 * ref.identity(ref.best):.2f}%" if ref.hits else ""), flush=True)
+                  + (f" {100 * ref.identity(ref.best):.2f}%" if ref.best is not None else ""), flush=True)
         rows.append((read, hits, ref))
     return rows
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--batch", type=Path)
     ap.add_argument("--no-blast", action="store_true")
