@@ -104,7 +104,7 @@ def load_references(ref_dir: Path, species_order: list[str] | None = None) -> li
     """One Reference per *.fasta/*.fna/*.fa in ref_dir, named from the first header."""
     refs = []
     for path in sorted(p for p in ref_dir.iterdir() if p.suffix in {".fasta", ".fna", ".fa"}):
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             header = fh.readline().strip().lstrip(">")
         accession = re.match(r"(GC[AF]_\d+\.\d)", path.name)
         m = _NAME_RE.match(header)

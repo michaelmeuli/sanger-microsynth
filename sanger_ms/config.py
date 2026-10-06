@@ -11,7 +11,7 @@ def load_mail_config(required: tuple[str, ...]) -> dict[str, str]:
     if not MAIL_ENV.exists():
         raise SystemExit(f"Missing {MAIL_ENV}; copy mail.env.example there and fill it in.")
     cfg = {"IMAP_FOLDER": "INBOX", "SENDER_FILTER": "microsynth", "SMTP_PORT": "587"}
-    for line in MAIL_ENV.read_text().splitlines():
+    for line in MAIL_ENV.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             key, value = line.split("=", 1)

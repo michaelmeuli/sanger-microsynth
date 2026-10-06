@@ -18,14 +18,14 @@ SEQ_SUFFIXES = {".ab1", ".seq", ".fasta", ".fa", ".fna", ".txt", ".pdf", ".zip"}
 
 def _load_state() -> dict[str, Any]:
     if STATE_FILE.exists():
-        state: dict[str, Any] = json.loads(STATE_FILE.read_text())
+        state: dict[str, Any] = json.loads(STATE_FILE.read_text(encoding="utf-8"))
         return state
     return {}
 
 
 def _save_state(state: dict[str, Any]) -> None:
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(state, indent=2))
+    STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8", newline="\n")
 
 
 def _safe_name(name: str) -> str:

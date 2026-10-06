@@ -71,3 +71,21 @@ Only 1 genome per species: intra-species diversity is not covered (see mlsa-kans
   ≥97% / ≥80%. For mycobacteria, a BLAST top hit on 16S cannot separate
   close species (e.g. the *M. kansasii* complex); see mlsa-kansasii.
 - Mail credentials are in `~/.config/sanger-microsynth/mail.env`, never in the repo.
+
+## Windows checkout
+
+- `.gitattributes` forces LF line endings, so a Windows checkout (even with
+  `core.autocrlf=true`) keeps scripts runnable. Recommended: `git config core.autocrlf false`
+  and `git config core.longpaths true`.
+- Scripts default to the cluster root `/shares/sander.imm.uzh/MM/kansasii`; set the
+  `KANSASII_ROOT` environment variable to point elsewhere (e.g. a mapped drive).
+- Nextflow, Singularity and sbatch steps only run on the cluster (or WSL).
+
+## Windows checkout
+
+- `.gitattributes` forces LF line endings, so a Windows checkout (even with
+  `core.autocrlf=true`) keeps scripts runnable. Recommended: `git config core.autocrlf false`
+  and `git config core.longpaths true`.
+- Scripts default to the cluster root `/shares/sander.imm.uzh/MM/kansasii`; set the
+  `KANSASII_ROOT` environment variable to point elsewhere (e.g. a mapped drive).
+- Nextflow, Singularity and sbatch steps only run on the cluster (or WSL).
