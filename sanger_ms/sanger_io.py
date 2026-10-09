@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 from Bio import SeqIO
 
@@ -35,6 +36,29 @@ def mott_trim(qualities: list[int], error_threshold: float = 0.05) -> tuple[int,
     return best_start, best_end
 
 
+def mixed_peak_fraction(record: Any, start: int, end: int, min_ratio: float = 0.25) -> float | None:
+    """Same as mlsa-kansasii mlsa.sanger_io.mixed_peak_fraction (keep in sync): a second template in the
+    PCR (mixed culture, cross-contamination) shows as secondary peaks at the base-call positions.
+    None if the trace lacks the channels or call positions."""
+    raw = cast("dict[str, Any]", record.annotations.get("abif_raw", {}))
+    order = raw.get("FWO_1")
+    locs = raw.get("PLOC2")
+    if order is None or locs is None or end <= start:
+        return None
+    if isinstance(order, bytes):
+        order = order.decode()
+    try:
+        channels = {base: raw[f"DATA{i}"] for base, i in zip(order, (9, 10, 11, 12))}
+    except KeyError:
+        return None
+    n_mixed = 0
+    for i in range(start, end):
+        pos = min(locs[i], len(channels["A"]) - 1)
+        top, second = sorted((channels[b][pos] for b in "ACGT"), reverse=True)[:2]
+        n_mixed += top > 0 and second / top >= min_ratio
+    return n_mixed / (end - start)
+
+
 @dataclass
 class Read:
     name: str
@@ -47,6 +71,7 @@ class Read:
     frac_q20: float
     n_count: int
     qualities: list[int]
+    mixed_fraction: float | None = None  # share of base calls with a secondary peak >= 25% of the primary
 
     @property
     def trimmed_length(self) -> int:
@@ -71,4 +96,5 @@ def load_read(path: Path, min_length: int = 100) -> Read | None:
         mean_q=sum(tq) / len(tq) if tq else 0.0,
         frac_q20=sum(q >= 20 for q in tq) / len(tq) if tq else 0.0,
         n_count=seq.count("N"), qualities=list(quals),
+        mixed_fraction=mixed_peak_fraction(rec, start, end),
     )

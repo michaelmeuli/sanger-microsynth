@@ -50,18 +50,37 @@ sbatch submit_fetch_analyse.sbatch                           # both steps
 
 Batches that already have a `<batch>.pdf` marker in the output folder are skipped.
 
-## Reference alignment
+## Reference alignment and calls
 
-Besides BLAST, every read is aligned to the GTDB representative genome of each
-*M. kansasii*-complex species
-(`data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_gtdb_representatives/`, 7 genomes).
-The closest reference (fewest differences over the read) is shown in the report table
-("Ref. alignment"), and one `<read>_alignment.pdf` per read (pairwise difference matrix +
-alignment of the read with all references, mismatches highlighted) goes to
-`output/sanger-microsynth/<batch>/` and is attached to the mail. Call: `ok` = closest reference
-&ge;99% identical and &ge;2 differences fewer than the next; `ambiguous` = tie; `divergent` = closest
-&lt;99% (outside the references' diversity, or a bad read). No PDF below 90% identity. `--no-refalign` skips this.
-Only 1 genome per species: intra-species diversity is not covered (see mlsa-kansasii README, main3).
+Besides BLAST, every read is aligned to references of the *M. kansasii* complex:
+
+- **hsp65 reads**: the in-silico hsp65 amplicon of each of the 72 GTDB genomes of the 7 species
+  (`data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_hsp65_amplicons/`, made by mlsa-kansasii
+  `scripts/make_hsp65_references.py`). This covers within-species diversity, and the three Korean *M. kansasii*
+  genomes with a persicum-like hsp65 are marked as "atypical hsp65".
+- **other reads (16S, unknown locus)**: the 7 representative genomes
+  (`kansasii_complex_gtdb_representatives/`).
+
+Call = reference with the fewest differences over the read; `ok` = &ge;98% identity and &ge;2 differences fewer than
+the closest other species. `ambiguous` = tie, `divergent` = closest &lt;98%. One `<read>_alignment.pdf` per read
+(best genome per species) goes to `output/sanger-microsynth/<batch>/` and is attached to the mail. No PDF below
+90% identity. `--no-refalign` skips this.
+
+The **Action** column and the per-sample table apply these rules (`sanger_ms/call.py`), validated in
+mlsa-kansasii main4 (hsp65: 78/79 calls correct against whole-genome species):
+
+| Situation | Action |
+|---|---|
+| &ge;98% identity, &ge;2 differences ahead, mixed peaks &lt;10%, read &ge;200 bp | report |
+| closest = atypical-hsp65 kansasii genome, or species not separated | confirm with gyrA |
+| no reference &ge;98% identical, or read &lt;200 bp | repeat sequencing |
+| &ge;10% of base calls with a secondary peak | possible mixed culture: repeat from pure colony |
+| 16S read | not species-informative for this complex |
+
+**Forward and reverse reads** (TB-11 / TB-12(w)) are paired by the 10-digit sample number in the file name and
+locus. Every read is still called on its own; the sample call needs all usable reads to agree (in the lab data,
+51 samples have both reads and none disagree), otherwise the sample is "repeat sequencing, reads disagree".
+No consensus sequence is built: each read covers about 85% of the 441 bp amplicon and the reads agree.
 
 ## Notes
 

@@ -29,8 +29,13 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 K = 15
+# GTDB kansasii genomes with a persicum-like hsp65 (11 SNPs in the 441 bp amplicon) that are
+# M. kansasii by ANI and at every other locus (LIT.md). hsp65 alone would call them persicum, so a read
+# matching them is reported as kansasii with an "atypical hsp65" note, not silently as persicum.
+ATYPICAL_HSP65 = frozenset({"GCF_002705785.1", "GCF_002705825.1", "GCF_002705865.1"})
 PAD = 40  # bases of reference added on each side of the seeded window
 MIN_SEEDS = 5
+SPECIES_ORDER = ["kansasii", "persicum", "pseudokansasii", "innocens", "attenuatum", "ostraviense", "gastri"]
 _LUT = np.full(256, 255, dtype=np.uint8)
 for _i, _b in enumerate(b"ACGT"):
     _LUT[_b] = _LUT[_b + 32] = _i
@@ -71,6 +76,7 @@ class Reference:
     species: str
     strain: str
     path: Path
+    atypical: bool = False
     contigs: dict[str, str] = field(default_factory=dict, repr=False)
     _ids: list[str] = field(default_factory=list, repr=False)
     # offset of each contig in _codes
@@ -80,7 +86,7 @@ class Reference:
 
     @property
     def label(self) -> str:
-        return f"Mycobacterium {self.species} {self.strain}".strip()
+        return f"Mycobacterium {self.species} {self.strain}{' (atypical hsp65)' if self.atypical else ''}".strip()
 
     def load(self) -> None:
         if not self.contigs:
@@ -108,11 +114,12 @@ def load_references(ref_dir: Path, species_order: list[str] | None = None) -> li
             header = fh.readline().strip().lstrip(">")
         accession = re.match(r"(GC[AF]_\d+\.\d)", path.name)
         m = _NAME_RE.match(header)
+        acc = accession.group(1) if accession else path.stem
         refs.append(Reference(
-            accession=accession.group(1) if accession else path.stem,
+            accession=acc,
             species=m.group("species") if m else "unknown",
             strain=(m.group("strain") or "").strip() if m else header[:30],
-            path=path))
+            path=path, atypical=acc in ATYPICAL_HSP65))
     if species_order:
         refs.sort(key=lambda r: (species_order.index(r.species) if r.species in species_order else 99, r.species))
     return refs
@@ -208,7 +215,7 @@ class ReadResult:
     hits: list[RefHit]
     diffs: list[int]     # per hit: differences vs the read
     compared: list[int]  # per hit: columns compared
-    min_identity: float = 0.99
+    min_identity: float = 0.98
     min_margin: int = 2
 
     @property
@@ -231,7 +238,8 @@ class ReadResult:
         o = self.order
         if self.identity(o[0]) < self.min_identity:
             return "divergent"
-        if len(o) > 1 and self.diffs[o[1]] - self.diffs[o[0]] < self.min_margin:
+        r = self.runner_up
+        if r is not None and self.diffs[r] - self.diffs[o[0]] < self.min_margin:
             return "ambiguous"
         return "ok"
 
@@ -242,11 +250,34 @@ class ReadResult:
 
     @property
     def runner_up(self) -> int | None:
-        return self.order[1] if len(self.hits) > 1 else None
+        """Best hit of another species than the closest (several genomes per species are fine)."""
+        o = self.order
+        return next((i for i in o[1:] if self.hits[i].ref.species != self.hits[o[0]].ref.species), None)
+
+    @property
+    def atypical(self) -> bool:
+        """The closest reference is a kansasii genome with a persicum-like hsp65."""
+        b = self.best
+        return b is not None and self.hits[b].ref.atypical
+
+    def collapsed(self) -> "ReadResult":
+        """Only the best hit per species (and per atypical group), for figures with many references."""
+        seen: set[tuple[str, bool]] = set()
+        keep = []
+        for i in self.order:
+            key = (self.hits[i].ref.species, self.hits[i].ref.atypical)
+            if key not in seen:
+                seen.add(key)
+                keep.append(i)
+        keep.sort(key=lambda i: (SPECIES_ORDER.index(self.hits[i].ref.species)
+                                 if self.hits[i].ref.species in SPECIES_ORDER else 99, self.hits[i].ref.atypical))
+        return ReadResult(self.name, self.locus, self.read, [self.hits[i] for i in keep],
+                          [self.diffs[i] for i in keep], [self.compared[i] for i in keep],
+                          self.min_identity, self.min_margin)
 
 
 def identify_read(refs: list[Reference], name: str, locus: str | None, seq: str,
-                  min_identity: float = 0.99, min_margin: int = 2) -> ReadResult:
+                  min_identity: float = 0.98, min_margin: int = 2) -> ReadResult:
     hits = [h for h in (align_to_reference(r, seq) for r in refs) if h is not None]
     dc = [_diff(seq, h.ref_cols) for h in hits]
     return ReadResult(name, locus, seq, hits, [d for d, _ in dc], [c for _, c in dc], min_identity, min_margin)
@@ -282,6 +313,7 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
     from matplotlib.patches import Rectangle
 
     W, H = 842, 595  # A4 landscape in points
+    res = res.collapsed()
     labels, diff, ident = pairwise_matrix(res)
     n = len(labels)
     best = res.best

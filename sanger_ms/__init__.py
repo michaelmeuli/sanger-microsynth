@@ -12,3 +12,6 @@ MAIL_ENV = Path.home() / ".config" / "sanger-microsynth" / "mail.env"
 REFERENCES = SHARES / "data" / "gtdb_genomes" / "Mycobacteriaceae" / "kansasii_complex_gtdb_representatives"
 # Order of the species in the alignment/matrix (same as mlsa-kansasii's SPECIES).
 SPECIES = ["kansasii", "persicum", "pseudokansasii", "innocens", "attenuatum", "ostraviense", "gastri"]
+# The in-silico hsp65 amplicon of every GTDB genome of the complex (mlsa-kansasii scripts/make_hsp65_references.py):
+# reference set for hsp65 reads, so within-species diversity is covered and the atypical-hsp65 kansasii is explicit.
+REFERENCES_HSP65 = SHARES / "data" / "gtdb_genomes" / "Mycobacteriaceae" / "kansasii_complex_hsp65_amplicons"
