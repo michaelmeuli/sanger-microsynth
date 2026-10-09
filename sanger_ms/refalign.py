@@ -32,6 +32,10 @@ K = 15
 # GTDB kansasii genomes with a persicum-like hsp65 (11 SNPs in the 441 bp amplicon) that are
 # M. kansasii by ANI and at every other locus (LIT.md). hsp65 alone would call them persicum, so a read
 # matching them is reported as kansasii with an "atypical hsp65" note, not silently as persicum.
+# The reference strain of each species (= the 7 genomes of kansasii_complex_gtdb_representatives): ATCC 12478,
+# AFPC-000227, MK142, MK13, MK41, 241/15, DSM 43505. Figures show these, whatever the larger reference set is.
+REPRESENTATIVES = frozenset({"GCF_000157895.3", "GCF_002086675.1", "GCF_900566075.1", "GCF_900566055.1",
+                             "GCF_900566085.1", "GCF_002705925.1", "GCF_002102175.1"})
 ATYPICAL_HSP65 = frozenset({"GCF_002705785.1", "GCF_002705825.1", "GCF_002705865.1"})
 PAD = 40  # bases of reference added on each side of the seeded window
 MIN_SEEDS = 5
@@ -261,18 +265,24 @@ class ReadResult:
         return b is not None and self.hits[b].ref.atypical
 
     def collapsed(self) -> "ReadResult":
-        """Only the best hit per species (and per atypical group), for figures with many references."""
-        seen: set[tuple[str, bool]] = set()
-        keep = []
-        for i in self.order:
-            key = (self.hits[i].ref.species, self.hits[i].ref.atypical)
-            if key not in seen:
-                seen.add(key)
-                keep.append(i)
-        keep.sort(key=lambda i: (SPECIES_ORDER.index(self.hits[i].ref.species)
-                                 if self.hits[i].ref.species in SPECIES_ORDER else 99, self.hits[i].ref.atypical))
-        return ReadResult(self.name, self.locus, self.read, [self.hits[i] for i in keep],
-                          [self.diffs[i] for i in keep], [self.compared[i] for i in keep],
+        """For figures with many references: the reference strain of each species, plus the closest
+        atypical-hsp65 genome only when it is the first hit. A species without its strain among the hits
+        falls back to its best hit."""
+        keep: dict[str, int] = {}
+        for i in self.order:  # best first
+            sp = self.hits[i].ref.species
+            if self.hits[i].ref.accession in REPRESENTATIVES:
+                keep[sp] = i  # overrides a fallback found earlier
+            elif sp not in keep and not self.hits[i].ref.atypical:
+                keep.setdefault(sp, i)
+        idx = list(keep.values())
+        b = self.best
+        if b is not None and self.hits[b].ref.atypical:
+            idx.append(b)
+        idx.sort(key=lambda i: (SPECIES_ORDER.index(self.hits[i].ref.species)
+                                if self.hits[i].ref.species in SPECIES_ORDER else 99, self.hits[i].ref.atypical))
+        return ReadResult(self.name, self.locus, self.read, [self.hits[i] for i in idx],
+                          [self.diffs[i] for i in idx], [self.compared[i] for i in idx],
                           self.min_identity, self.min_margin)
 
 
@@ -313,10 +323,13 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
     from matplotlib.patches import Rectangle
 
     W, H = 842, 595  # A4 landscape in points
-    res = res.collapsed()
+    full, res = res, res.collapsed()
     labels, diff, ident = pairwise_matrix(res)
     n = len(labels)
-    best = res.best
+    # bold row: the strain shown for the closest species (the atypical row when that is the closest hit)
+    fb = full.best
+    best = next((k for k, h in enumerate(res.hits) if fb is not None
+                 and h.ref.species == full.hits[fb].ref.species and h.ref.atypical == full.hits[fb].ref.atypical), None)
     names = [h.ref.label for h in res.hits] + [res.name]
     seqs = [h.ref_cols for h in res.hits] + [res.read]
     cw, lh = _CW * _FS, _FS * 1.35
@@ -334,14 +347,15 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
     pages.append(fig)
     ax.text(30, 30, title or f"{res.name}: alignment to the kansasii-complex reference strains",
             fontsize=12, weight="bold", va="center")
-    if res.hits:
-        o = res.order
-        verdict = (f"Closest: M. {res.closest_species} ({res.hits[o[0]].ref.accession}), "
-                   f"{res.identity(o[0]) * 100:.2f}% identity ({res.diffs[o[0]]} of {res.compared[o[0]]} positions differ)")
-        if res.runner_up is not None:
-            r = res.runner_up
-            verdict += f"; next: M. {res.hits[r].ref.species} {res.identity(r) * 100:.2f}% ({res.diffs[r]})"
-        verdict += f". Call: {res.status} (needs >= {res.min_identity * 100:g}% and >= {res.min_margin} fewer differences than the next)."
+    if full.hits:
+        o = full.order
+        verdict = (f"Closest of {len(full.hits)} reference genomes: M. {full.closest_species} ({full.hits[o[0]].ref.accession}), "
+                   f"{full.identity(o[0]) * 100:.2f}% identity ({full.diffs[o[0]]} of {full.compared[o[0]]} positions differ)")
+        if full.runner_up is not None:
+            r = full.runner_up
+            verdict += f"; next species: M. {full.hits[r].ref.species} {full.identity(r) * 100:.2f}% ({full.diffs[r]})"
+        verdict += f". Call: {full.status} (needs >= {full.min_identity * 100:g}% and >= {full.min_margin} fewer differences than the next species)."
+        verdict += " Shown: the reference strain of each species."
     else:
         verdict = "No reference shares enough k-mers with the read."
     ax.text(30, 50, verdict, fontsize=8, va="center")

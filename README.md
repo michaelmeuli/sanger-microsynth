@@ -63,7 +63,8 @@ Besides BLAST, every read is aligned to references of the *M. kansasii* complex:
 
 Call = reference with the fewest differences over the read; `ok` = &ge;98% identity and &ge;2 differences fewer than
 the closest other species. `ambiguous` = tie, `divergent` = closest &lt;98%. One `<read>_alignment.pdf` per read
-(best genome per species) goes to `output/sanger-microsynth/<batch>/` and is attached to the mail. No PDF below
+(the 7 reference strains: ATCC 12478, AFPC-000227, MK142, MK13, MK41, 241/15, DSM 43505; plus the Korean
+atypical-hsp65 genome only when it is the closest hit; the call itself uses all 72 genomes) goes to `output/sanger-microsynth/<batch>/` and is attached to the mail. No PDF below
 90% identity. `--no-refalign` skips this.
 
 The **Action** column and the per-sample table apply these rules (`sanger_ms/call.py`), validated in
