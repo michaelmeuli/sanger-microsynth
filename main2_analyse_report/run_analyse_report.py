@@ -84,11 +84,6 @@ def main() -> None:
         print("Nothing to report.")
         return
     pdf = build_pdf(results, OUTPUT / f"report_{datetime.now():%Y%m%d_%H%M}.pdf")
-    if not args.batch:  # mark mail batches as done
-        for name in results:
-            marker = OUTPUT / f"{name}.pdf"
-            if not marker.exists():
-                marker.symlink_to(pdf.name)
     print(f"Wrote {pdf}")
     if not args.no_send and (args.send or not args.batch):
         send_report(load_mail_config(REQUIRED_SMTP), pdf, "Microsynth Sanger report",
@@ -96,6 +91,11 @@ def main() -> None:
                     "plus one alignment PDF per read against the kansasii-complex reference strains.",
                     extra=attachments)
         print("Report emailed.")
+    if not args.batch:  # mark mail batches as done only after the mail went out (a failed send is retried)
+        for name in results:
+            marker = OUTPUT / f"{name}.pdf"
+            if not marker.exists():
+                marker.symlink_to(pdf.name)
 
 
 if __name__ == "__main__":
