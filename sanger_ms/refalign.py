@@ -13,7 +13,6 @@ as sanger_ms/refalign.py; keep the two in sync.
 from __future__ import annotations
 
 import re
-from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -387,11 +386,11 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
                 color, txt = (1 - 0.5 * a, 1 - 0.5 * a, 1), "" if np.isnan(ident[i, j]) else f"{ident[i, j]:.2f}"
             ax.add_patch(Rectangle((mx + j * cell, y), cell - 2, 12, color=color))
             ax.text(mx + j * cell + cell - 5, y + 6, txt, fontsize=6.5, ha="right", va="center")
-    ax.text(mx + n * cell + 8, my + 16 + 6, "upper: differences\nlower: % identity", fontsize=6, va="top", color="#555")
+    ax.text(mx + n * cell + 8, my + 16 + 6, "upper: differences\nlower: % identity"
+            + (f"\nshaded bases differ from\n{names[best]}" if best is not None else ""), fontsize=6, va="top", color="#555")
 
     y = my + 16 + n * 14 + 28
     L = len(res.read)
-    consensus = [Counter(s[p] for s in seqs if s[p] in "ACGT").most_common(1) for p in range(L)]
     for b0 in range(0, L, _BLOCK):
         need = lh * (n + 2)
         if y + need > H - 30:
@@ -414,7 +413,7 @@ def write_pdf(res: ReadResult, out: Path, title: str | None = None) -> Path:
                     fontsize=_FS, family="DejaVu Sans Mono", va="top")
             for k, ch in enumerate(seg):
                 p = b0 + k
-                if ch in "ACGT" and consensus[p] and ch != consensus[p][0][0]:
+                if best is not None and r != best and ch in "ACGT" and seqs[best][p] in "ACGT" and ch != seqs[best][p]:
                     ax.add_patch(Rectangle((x0 + (k + k // 10) * cw, yy - 0.5), cw, lh - 1, color="#f4a7a7", zorder=0))
             ax.text(x0 + (len(seg) + len(seg) // 10) * cw + 6, yy, str(b1), fontsize=_FS, family="DejaVu Sans Mono", va="top")
         y += lh * (n + 1.4)
