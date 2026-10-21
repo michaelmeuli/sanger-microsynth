@@ -61,7 +61,7 @@ def _kmer_codes(seq: str | bytes) -> npt.NDArray[np.uint32]:
     return code
 
 
-_COMP = str.maketrans("ACGTN-", "TGCAN-")
+_COMP = str.maketrans("ACGTRYKMSWBDHVN-", "TGCAYRMKSWVHDBN-")
 
 
 def revcomp(seq: str) -> str:
