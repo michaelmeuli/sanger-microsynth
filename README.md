@@ -68,7 +68,7 @@ atypical-hsp65 genome only when it is the closest hit; the call itself uses all 
 90% identity. `--no-refalign` skips this.
 
 The **Action** column and the per-sample table apply these rules (`sanger_ms/call.py`), validated in
-mlsa-kansasii main4 (hsp65: 78/79 calls correct against whole-genome species):
+mlsa-kansasii sanger_vs_wgs (hsp65: 78/79 calls correct against whole-genome species):
 
 | Situation | Action |
 |---|---|

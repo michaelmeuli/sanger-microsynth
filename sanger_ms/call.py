@@ -1,6 +1,6 @@
 """Per-read action and per-sample species call (forward and reverse reads paired).
 
-Rules validated against whole-genome species in mlsa-kansasii main4 (hsp65: 78/79 calls correct):
+Rules validated against whole-genome species in mlsa-kansasii sanger_vs_wgs (hsp65: 78/79 calls correct):
   report   closest >= 98% identical, >= 2 differences fewer than the next species, mixed peaks < 10%
   confirm  closest is the atypical-hsp65 kansasii lineage, or the margin is < 2: add gyrA
   repeat   no reference >= 98% identical, or the trimmed read is < 200 bp
