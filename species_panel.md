@@ -2,7 +2,7 @@
 
 Ten hsp65 Sanger traces of isolates with a known species (`data/imm/screening_map_results.csv`, column `species`),
 copied from `data/sanger/seq_kansasii/` into `data/sanger/microsynth_mail/20261016_species_panel/` as `<TNR> hsp65_Tb-11.ab1`.
-Analysed with `main2_analyse_report/run_analyse_report.py --batch <dir> --no-send --no-blast`.
+Analysed with `scripts/02_analyse_report.py --batch <dir> --no-send --no-blast`.
 
 | Species | Isolate | Trace (TNR) | Closest reference |
 |---|---|---|---|

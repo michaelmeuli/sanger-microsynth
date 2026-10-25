@@ -16,7 +16,7 @@ so scripts can't log in directly. Instead an Outlook rule forwards Microsynth
 mails (with attachments) to the Gmail account, and this pipeline reads and
 sends through Gmail with an app password. (UZH may restrict auto-forwarding;
 if the rule is blocked, save attachments into `data/sanger/microsynth_mail/<batch>/`
-by hand and run `main2` on them.)
+by hand and run `scripts/02_analyse_report.py` on them.)
 
 ## Layout
 
@@ -25,10 +25,15 @@ by hand and run `main2` on them.)
   `identify.py` (NCBI BLAST of the trimmed read), `refalign.py` (alignment of the read to the 7
   kansasii-complex reference strains, PDF per read; copy of mlsa-kansasii's `mlsa/refalign.py`), `report.py` (PDF, reportlab),
   `send.py` (SMTP), `config.py`.
-- `main1_fetch_mail/` — downloads new result mails' attachments to
-  `/shares/sander.imm.uzh/MM/kansasii/data/sanger/microsynth_mail/<date>_<msgid>/`.
-- `main2_analyse_report/` — QC + species ID per batch, PDF to
-  `/shares/sander.imm.uzh/MM/kansasii/output/sanger-microsynth/`, then emails it.
+- `scripts/01_fetch_mail.py` — downloads new result mails' attachments to
+  `data/sanger/microsynth_mail/<date>_<msgid>/`.
+- `scripts/02_analyse_report.py` — QC + species ID per batch, PDF to
+  `output/sanger-microsynth/`, then emails it. References are flags:
+  `--gtdb-representatives` (default `GTDB_REPRESENTATIVES`, 7 genomes, for 16S and other reads) and `--hsp65-amplicons`
+  (default `HSP65_AMPLICONS`, 72 amplicons, for hsp65 reads).
+- `sanger_ms/kansasii_paths.py` — shared project constants (vendored; same names as in every repo). Repo-specific
+  paths (`MAIL_DIR`, `STATE_FILE`, `OUTPUT`, `MAIL_ENV`) are in `sanger_ms/__init__.py`.
+- `submit_fetch_analyse.sbatch` — both steps as a job.
 
 ## Setup
 
@@ -42,9 +47,9 @@ chmod 600 ~/.config/sanger-microsynth/mail.env   # then fill in the Gmail addres
 
 ```bash
 conda activate env_sanger_ms
-python main1_fetch_mail/run_fetch_mail.py
-python main2_analyse_report/run_analyse_report.py            # all new batches, emails the PDF
-python main2_analyse_report/run_analyse_report.py --batch DIR --no-blast   # local test, no mail
+python scripts/01_fetch_mail.py
+python scripts/02_analyse_report.py            # all new batches, emails the PDF
+python scripts/02_analyse_report.py --batch DIR --no-blast   # local test, no mail
 sbatch submit_fetch_analyse.sbatch                           # both steps
 ```
 
@@ -55,11 +60,11 @@ Batches that already have a `<batch>.pdf` marker in the output folder are skippe
 Besides BLAST, every read is aligned to references of the *M. kansasii* complex:
 
 - **hsp65 reads**: the in-silico hsp65 amplicon of each of the 72 GTDB genomes of the 7 species
-  (`data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_hsp65_amplicons/`, made by mlsa-kansasii
-  `scripts/04_make_hsp65_references.py`). This covers within-species diversity, and the three Korean *M. kansasii*
+  (`HSP65_AMPLICONS` = `data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_hsp65_amplicons/`, made by mlsa-kansasii
+  `scripts/06_make_hsp65_references.py`). This covers within-species diversity, and the three Korean *M. kansasii*
   genomes with a persicum-like hsp65 are marked as "atypical hsp65".
 - **other reads (16S, unknown locus)**: the 7 representative genomes
-  (`kansasii_complex_gtdb_representatives/`).
+  (`GTDB_REPRESENTATIVES` = `kansasii_complex_gtdb_representatives/`).
 
 Call = reference with the fewest differences over the read; `ok` = &ge;98% identity and &ge;2 differences fewer than
 the closest other species. `ambiguous` = tie, `divergent` = closest &lt;98%. One `<read>_alignment.pdf` per read
