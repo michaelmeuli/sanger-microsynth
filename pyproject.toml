@@ -4,6 +4,6 @@
 strict = true
 python_version = "3.11"
 explicit_package_bases = true
-files = ["sanger_ms", "main1_fetch_mail", "main2_analyse_report"]
+files = ["sanger_ms", "scripts"]
 # Biopython ships py.typed but leaves many functions unannotated.
 untyped_calls_exclude = ["Bio"]

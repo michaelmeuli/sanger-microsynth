@@ -2,10 +2,10 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the sanger_ms package
 
-from sanger_ms.config import REQUIRED_IMAP, load_mail_config
-from sanger_ms.mail import fetch_new
+from sanger_ms.config import REQUIRED_IMAP, load_mail_config  # noqa: E402
+from sanger_ms.mail import fetch_new  # noqa: E402
 
 if __name__ == "__main__":
     new = fetch_new(load_mail_config(REQUIRED_IMAP))

@@ -5,6 +5,8 @@ Default: every batch folder in data/sanger/microsynth_mail/ without a report yet
   --no-blast    skip the NCBI BLAST species identification
   --no-refalign skip the alignment to the kansasii-complex references (hsp65 amplicons of 72 genomes; 7 genomes otherwise)
   --no-send     build the PDF but don't email it
+  --gtdb-representatives DIR  reference genomes for non-hsp65 reads (default GTDB_REPRESENTATIVES)
+  --hsp65-amplicons DIR       per-genome hsp65 amplicons for hsp65 reads (default HSP65_AMPLICONS)
 """
 from __future__ import annotations
 
@@ -14,15 +16,16 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # repo root: the sanger_ms package
 
-from sanger_ms import MAIL_DIR, OUTPUT, REFERENCES, REFERENCES_HSP65, SPECIES
-from sanger_ms.config import REQUIRED_SMTP, load_mail_config
-from sanger_ms.identify import Hit, blast_read
-from sanger_ms.refalign import ReadResult, Reference, identify_read, load_references, write_pdf
-from sanger_ms.report import build_pdf
-from sanger_ms.sanger_io import Read, load_read
-from sanger_ms.send import send_report
+from sanger_ms import MAIL_DIR, OUTPUT  # noqa: E402
+from sanger_ms.config import REQUIRED_SMTP, load_mail_config  # noqa: E402
+from sanger_ms.identify import Hit, blast_read  # noqa: E402
+from sanger_ms.kansasii_paths import GTDB_REPRESENTATIVES, HSP65_AMPLICONS, SPECIES  # noqa: E402
+from sanger_ms.refalign import ReadResult, Reference, identify_read, load_references, write_pdf  # noqa: E402
+from sanger_ms.report import build_pdf  # noqa: E402
+from sanger_ms.sanger_io import Read, load_read  # noqa: E402
+from sanger_ms.send import send_report  # noqa: E402
 
 
 MIN_ALIGNED_IDENTITY = 0.90  # below this the read is not in the complex: no alignment PDF
@@ -62,6 +65,8 @@ def main() -> None:
     ap.add_argument("--no-refalign", action="store_true")
     ap.add_argument("--no-send", action="store_true")
     ap.add_argument("--send", action="store_true", help="email even with --batch")
+    ap.add_argument("--gtdb-representatives", type=Path, default=GTDB_REPRESENTATIVES)
+    ap.add_argument("--hsp65-amplicons", type=Path, default=HSP65_AMPLICONS)
     args = ap.parse_args()
 
     OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -69,8 +74,8 @@ def main() -> None:
         batches = [args.batch]
     else:
         batches = [d for d in sorted(MAIL_DIR.glob("*_*")) if d.is_dir() and not (OUTPUT / f"{d.name}.pdf").exists()]
-    refs = None if args.no_refalign else load_references(REFERENCES, SPECIES)
-    refs_hsp65 = load_references(REFERENCES_HSP65, SPECIES) if refs and REFERENCES_HSP65.is_dir() else None
+    refs = None if args.no_refalign else load_references(args.gtdb_representatives, SPECIES)
+    refs_hsp65 = load_references(args.hsp65_amplicons, SPECIES) if refs and args.hsp65_amplicons.is_dir() else None
     results = {}
     attachments = []
     for b in batches:
