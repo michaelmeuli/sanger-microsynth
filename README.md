@@ -29,8 +29,8 @@ by hand and run `scripts/02_analyse_report.py` on them.)
   `data/sanger/microsynth_mail/<date>_<msgid>/`.
 - `scripts/02_analyse_report.py` — QC + species ID per batch, PDF to
   `output/sanger-microsynth/`, then emails it. References are flags:
-  `--gtdb-representatives` (default `GTDB_REPRESENTATIVES`, 7 genomes, for 16S and other reads) and `--hsp65-amplicons`
-  (default `HSP65_AMPLICONS`, 72 amplicons, for hsp65 reads).
+  `--gtdb-representatives` (default `GTDB_REPRESENTATIVES`, the 7 representative genomes, for all reads) and the
+  opt-in `--hsp65-amplicons [DIR]` (default dir `HSP65_AMPLICONS`, 72 amplicons, for hsp65 reads; see below).
 - `sanger_ms/kansasii_paths.py` — shared project constants (vendored; same names as in every repo). Repo-specific
   paths (`MAIL_DIR`, `STATE_FILE`, `OUTPUT`, `MAIL_ENV`) are in `sanger_ms/__init__.py`.
 - `submit_fetch_analyse.sbatch` — both steps as a job.
@@ -59,17 +59,23 @@ Batches that already have a `<batch>.pdf` marker in the output folder are skippe
 
 Besides BLAST, every read is aligned to references of the *M. kansasii* complex:
 
-- **hsp65 reads**: the in-silico hsp65 amplicon of each of the 72 GTDB genomes of the 7 species
-  (`HSP65_AMPLICONS` = `data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_hsp65_amplicons/`, made by mlsa-kansasii
-  `scripts/06_make_hsp65_references.py`). This covers within-species diversity, and the three Korean *M. kansasii*
-  genomes with a persicum-like hsp65 are marked as "atypical hsp65".
-- **other reads (16S, unknown locus)**: the 7 representative genomes
-  (`GTDB_REPRESENTATIVES` = `kansasii_complex_gtdb_representatives/`).
+- **Default, all reads: the 7 representative genomes** (`GTDB_REPRESENTATIVES` = `kansasii_complex_gtdb_representatives/`).
+  This is the set validated against whole-genome species (hsp65-refalign: 110 of 136 isolates correct, 1 wrong, a mixed
+  culture; 25 no call). One consequence: the persicum-like hsp65 of the Korean *M. kansasii* lineage is 1-3 differences from
+  persicum and 10-11 from typical kansasii, so a read of such a strain would be called **persicum with `ok`**. It was not
+  found among the lab isolates (0 of 121 kansasii) and in 1 of 880 public GTDB-kansasii assemblies. Confirm persicum calls
+  with gyrA where this matters.
+- **Option `--hsp65-amplicons`** (use it only if the lab sequences gyrA): hsp65 reads are aligned to the in-silico hsp65
+  amplicon of each of the 72 GTDB genomes (`HSP65_AMPLICONS` = `data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_hsp65_amplicons/`,
+  made by mlsa-kansasii `scripts/06_make_hsp65_references.py`). The three Korean genomes are marked "atypical hsp65", so
+  a Korean-type read is `ambiguous` and gets the action *confirm with gyrA* instead of an `ok` persicum call. Cost: the
+  persicum margin falls from a median of 7 to 3 differences, and 2 of 28 persicum reads in the lab data become
+  `ambiguous` (also *confirm with gyrA*). Other loci (16S, unknown) always use the 7.
 
 Call = reference with the fewest differences over the read; `ok` = &ge;98% identity and &ge;2 differences fewer than
 the closest other species. `ambiguous` = tie, `divergent` = closest &lt;98%. One `<read>_alignment.pdf` per read
 (the 7 reference strains: ATCC 12478, AFPC-000227, MK142, MK13, MK41, 241/15, DSM 43505; plus the Korean
-atypical-hsp65 genome only when it is the closest hit; the call itself uses all 72 genomes) goes to `output/sanger-microsynth/<batch>/` and is attached to the mail. No PDF below
+atypical-hsp65 genome only when it is the closest hit, which can only happen with `--hsp65-amplicons`) goes to `output/sanger-microsynth/<batch>/` and is attached to the mail. No PDF below
 90% identity. `--no-refalign` skips this.
 
 The **Action** column and the per-sample table apply these rules (`sanger_ms/call.py`), validated in
@@ -78,7 +84,7 @@ mlsa-kansasii sanger_vs_wgs (hsp65: 78/79 calls correct against whole-genome spe
 | Situation | Action |
 |---|---|
 | &ge;98% identity, &ge;2 differences ahead, mixed peaks &lt;10%, read &ge;200 bp | report |
-| closest = atypical-hsp65 kansasii genome, or species not separated | confirm with gyrA |
+| species not separated (margin < 2), or, with `--hsp65-amplicons`, closest = atypical-hsp65 kansasii genome | confirm with gyrA |
 | no reference &ge;98% identical, or read &lt;200 bp | repeat sequencing |
 | &ge;10% of base calls with a secondary peak | possible mixed culture: repeat from pure colony |
 | 16S read | not species-informative for this complex |

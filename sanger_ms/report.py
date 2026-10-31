@@ -63,7 +63,16 @@ def _sample_table(samples: list[SampleCall], small: Any) -> Table:
     return t
 
 
-def build_pdf(batches: dict[str, list[tuple[Read, list[Hit], ReadResult | None]]], out: Path) -> Path:
+def _reference_note(hsp65_all_genomes: bool) -> str:
+    if hsp65_all_genomes:
+        return ("hsp65 reads are aligned to the hsp65 amplicon of 72 genomes, other reads to the 7 reference strains; "
+                "the alignment PDFs show the 7 reference strains, plus the Korean atypical-hsp65 genome if it is the closest hit")
+    return ("all reads are aligned to the 7 reference strains; a persicum-like hsp65 of the Korean kansasii lineage "
+            "would be called persicum, so confirm persicum calls with gyrA where this matters")
+
+
+def build_pdf(batches: dict[str, list[tuple[Read, list[Hit], ReadResult | None]]], out: Path,
+              hsp65_all_genomes: bool = False) -> Path:
     styles = getSampleStyleSheet()
     small = styles["BodyText"].clone("small", fontSize=7.5, leading=9)
     doc = SimpleDocTemplate(str(out), pagesize=landscape(A4), leftMargin=1.5 * cm,
@@ -74,9 +83,7 @@ def build_pdf(batches: dict[str, list[tuple[Read, list[Hit], ReadResult | None]]
                        "species = top NCBI BLAST hit of the trimmed read (confidence: high "
                        "&ge;99% identity and &ge;90% coverage, medium &ge;97%/80%). "
                        "Ref. alignment = closest of the 7 kansasii-complex reference strains by plain alignment "
-                       "(call: ok = &ge;98% identity and &ge;2 fewer differences than the next species; hsp65 reads are aligned "
-                       "to the hsp65 amplicon of 72 genomes, other reads to the 7 reference strains; the alignment PDFs "
-                       "show the 7 reference strains, plus the Korean atypical-hsp65 genome if it is the closest hit). "
+                       "(call: ok = &ge;98% identity and &ge;2 fewer differences than the next species; " + _reference_note(hsp65_all_genomes) + "). "
                        "Action: report = species can be reported; confirm = add gyrA; repeat = resequence; "
                        "mixed = &ge;10% secondary peaks. Forward and reverse reads of a sample are combined in "
                        "the sample table; "

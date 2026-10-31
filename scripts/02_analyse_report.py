@@ -3,10 +3,12 @@
 Default: every batch folder in data/sanger/microsynth_mail/ without a report yet.
   --batch DIR   analyse one folder of .ab1 files (report is not emailed unless --send)
   --no-blast    skip the NCBI BLAST species identification
-  --no-refalign skip the alignment to the kansasii-complex references (hsp65 amplicons of 72 genomes; 7 genomes otherwise)
+  --no-refalign skip the alignment to the kansasii-complex references (the 7 representative genomes)
   --no-send     build the PDF but don't email it
-  --gtdb-representatives DIR  reference genomes for non-hsp65 reads (default GTDB_REPRESENTATIVES)
-  --hsp65-amplicons DIR       per-genome hsp65 amplicons for hsp65 reads (default HSP65_AMPLICONS)
+  --gtdb-representatives DIR  reference genomes for all reads (default GTDB_REPRESENTATIVES, the 7 representatives)
+  --hsp65-amplicons [DIR]     opt in: align hsp65 reads to the per-genome hsp65 amplicons of the 72 genomes instead
+                              (default DIR = HSP65_AMPLICONS). Flags the persicum-like (Korean) kansasii lineage for gyrA
+                              confirmation, but needs gyrA in the lab; with the 7 genomes that lineage reads as persicum.
 """
 from __future__ import annotations
 
@@ -46,8 +48,8 @@ def analyse_batch(batch: Path, blast: bool, refs: list[Reference] | None,
         ref = None
         if refs and read.trimmed_length >= 100:
             stem = Path(read.name).stem.replace(" ", "_")
-            # hsp65 reads: one amplicon per genome (diversity within species, atypical kansasii hsp65 explicit);
-            # everything else (16S, unknown locus): the 7 representative genomes
+            # default: the 7 representative genomes for every locus; with --hsp65-amplicons the hsp65 reads use one
+            # amplicon per genome (diversity within species, atypical kansasii hsp65 explicit)
             use = refs_hsp65 if read.locus == "hsp65" and refs_hsp65 else refs
             ref = identify_read(use, Path(read.name).stem, read.locus, read.trimmed_seq)
             if ref.best is not None and ref.identity(ref.best) >= MIN_ALIGNED_IDENTITY:
@@ -66,7 +68,7 @@ def main() -> None:
     ap.add_argument("--no-send", action="store_true")
     ap.add_argument("--send", action="store_true", help="email even with --batch")
     ap.add_argument("--gtdb-representatives", type=Path, default=GTDB_REPRESENTATIVES)
-    ap.add_argument("--hsp65-amplicons", type=Path, default=HSP65_AMPLICONS)
+    ap.add_argument("--hsp65-amplicons", type=Path, nargs="?", const=HSP65_AMPLICONS, default=None)
     args = ap.parse_args()
 
     OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -75,7 +77,11 @@ def main() -> None:
     else:
         batches = [d for d in sorted(MAIL_DIR.glob("*_*")) if d.is_dir() and not (OUTPUT / f"{d.name}.pdf").exists()]
     refs = None if args.no_refalign else load_references(args.gtdb_representatives, SPECIES)
-    refs_hsp65 = load_references(args.hsp65_amplicons, SPECIES) if refs and args.hsp65_amplicons.is_dir() else None
+    refs_hsp65 = None
+    if refs and args.hsp65_amplicons is not None:
+        if not args.hsp65_amplicons.is_dir():
+            sys.exit(f"--hsp65-amplicons: not a directory: {args.hsp65_amplicons}")
+        refs_hsp65 = load_references(args.hsp65_amplicons, SPECIES)
     results = {}
     attachments = []
     for b in batches:
@@ -88,7 +94,7 @@ def main() -> None:
     if not results:
         print("Nothing to report.")
         return
-    pdf = build_pdf(results, OUTPUT / f"report_{datetime.now():%Y%m%d_%H%M}.pdf")
+    pdf = build_pdf(results, OUTPUT / f"report_{datetime.now():%Y%m%d_%H%M}.pdf", hsp65_all_genomes=refs_hsp65 is not None)
     print(f"Wrote {pdf}")
     if not args.no_send and (args.send or not args.batch):
         send_report(load_mail_config(REQUIRED_SMTP), pdf, "Microsynth Sanger report",

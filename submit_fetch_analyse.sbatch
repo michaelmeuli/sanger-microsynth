@@ -18,4 +18,4 @@ python "$REPO/scripts/01_fetch_mail.py"
 python "$REPO/scripts/02_analyse_report.py" "$@"
 
 # provenance (see kansasii-docs/docs/PROVENANCE.md)
-bash "$MANIFEST_SCRIPT" "$OUTPUT" "$REPO" submit_fetch_analyse.sbatch "$DATA/sanger/microsynth_mail" "$GTDB_REPRESENTATIVES" "$HSP65_AMPLICONS"
+bash "$MANIFEST_SCRIPT" "$OUTPUT" "$REPO" submit_fetch_analyse.sbatch "$DATA/sanger/microsynth_mail" "$GTDB_REPRESENTATIVES"

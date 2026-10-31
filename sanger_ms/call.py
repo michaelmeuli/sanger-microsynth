@@ -2,7 +2,7 @@
 
 Rules validated against whole-genome species in mlsa-kansasii sanger_vs_wgs (hsp65: 78/79 calls correct):
   report   closest >= 98% identical, >= 2 differences fewer than the next species, mixed peaks < 10%
-  confirm  closest is the atypical-hsp65 kansasii lineage, or the margin is < 2: add gyrA
+  confirm  margin < 2, or (only with the 72-genome hsp65 references) closest is the atypical-hsp65 kansasii lineage: add gyrA
   repeat   no reference >= 98% identical, or the trimmed read is < 200 bp
   mixed    >= 10% of base calls carry a secondary peak: repeat from a pure colony
   16S      not species-informative for this complex
