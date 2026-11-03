@@ -63,7 +63,7 @@ Besides BLAST, every read is aligned to references of the *M. kansasii* complex:
   This is the set validated against whole-genome species (hsp65-refalign: 110 of 136 isolates correct, 1 wrong, a mixed
   culture; 25 no call). One consequence: the persicum-like hsp65 of the Korean *M. kansasii* lineage is 1-3 differences from
   persicum and 10-11 from typical kansasii, so a read of such a strain would be called **persicum with `ok`**. It was not
-  found among the lab isolates (0 of 121 kansasii) and in 1 of 880 public GTDB-kansasii assemblies. Confirm persicum calls
+  found among the lab isolates (0 of 121 kansasii) and in 1 of 857 public GTDB-kansasii assemblies (contaminated ones left out). Confirm persicum calls
   with gyrA where this matters.
 - **Option `--hsp65-amplicons`** (use it only if the lab sequences gyrA): hsp65 reads are aligned to the in-silico hsp65
   amplicon of each of the 72 GTDB genomes (`HSP65_AMPLICONS` = `data/gtdb_genomes/Mycobacteriaceae/kansasii_complex_hsp65_amplicons/`,
