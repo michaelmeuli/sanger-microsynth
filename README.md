@@ -24,7 +24,7 @@ by hand and run `scripts/02_analyse_report.py` on them.)
   `BODY.PEEK`), `sanger_io.py` (AB1 + Mott trimming, same as mlsa-kansasii),
   `identify.py` (NCBI BLAST of the trimmed read), `refalign.py` (alignment of the read to the 7
   kansasii-complex reference strains, PDF per read; copy of mlsa-kansasii's `mlsa/refalign.py`), `report.py` (PDF, reportlab),
-  `send.py` (SMTP), `config.py`.
+  `call.py` (report / confirm / repeat rule per read), `send.py` (SMTP), `config.py`.
 - `scripts/01_fetch_mail.py` — downloads new result mails' attachments to
   `data/sanger/microsynth_mail/<date>_<msgid>/`.
 - `scripts/02_analyse_report.py` — QC + species ID per batch, PDF to
