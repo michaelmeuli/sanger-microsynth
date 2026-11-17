@@ -7,7 +7,7 @@ Biopython's PairwiseAligner, and the reference that differs at the fewest
 positions of the read is the closest species. The read and all references are
 then drawn as one read-anchored alignment plus a pairwise difference matrix.
 
-Self-contained (numpy, Biopython, matplotlib). sanger-microsynth carries a copy
+Needs numpy, Biopython, matplotlib; the accession and species lists come from the vendored kansasii_paths. sanger-microsynth carries a copy
 as sanger_ms/refalign.py; keep the two in sync.
 """
 from __future__ import annotations
@@ -23,6 +23,8 @@ from Bio import SeqIO
 from Bio.Align import PairwiseAligner
 from Bio.Seq import Seq
 
+from .kansasii_paths import ATYPICAL_HSP65_GENOMES, GTDB_REPRESENTATIVE_GENOMES, SPECIES
+
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
@@ -33,12 +35,11 @@ K = 15
 # matching them is reported as kansasii with an "atypical hsp65" note, not silently as persicum.
 # The reference strain of each species (= the 7 genomes of kansasii_complex_gtdb_representatives): ATCC 12478,
 # AFPC-000227, MK142, MK13, MK41, 241/15, DSM 43505. Figures show these, whatever the larger reference set is.
-REPRESENTATIVES = frozenset({"GCF_000157895.3", "GCF_002086675.1", "GCF_900566075.1", "GCF_900566055.1",
-                             "GCF_900566085.1", "GCF_002705925.1", "GCF_002102175.1"})
-ATYPICAL_HSP65 = frozenset({"GCF_002705785.1", "GCF_002705825.1", "GCF_002705865.1"})
+REPRESENTATIVES = frozenset(GTDB_REPRESENTATIVE_GENOMES)
+ATYPICAL_HSP65 = frozenset(ATYPICAL_HSP65_GENOMES)
 PAD = 40  # bases of reference added on each side of the seeded window
 MIN_SEEDS = 5
-SPECIES_ORDER = ["kansasii", "persicum", "pseudokansasii", "innocens", "attenuatum", "ostraviense", "gastri"]
+SPECIES_ORDER = SPECIES
 _LUT = np.full(256, 255, dtype=np.uint8)
 for _i, _b in enumerate(b"ACGT"):
     _LUT[_b] = _LUT[_b + 32] = _i
